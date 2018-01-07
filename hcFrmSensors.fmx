@@ -1,0 +1,110 @@
+object frmSensors: TfrmSensors
+  Left = 0
+  Top = 0
+  Caption = 'Form2'
+  ClientHeight = 323
+  ClientWidth = 273
+  StyleBook = dmShared.sbListBox
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMasterStyle = 0
+  object lbSensors: TListBox
+    Align = Client
+    Size.Width = 273.000000000000000000
+    Size.Height = 275.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    DisableFocusEffect = True
+    ItemHeight = 64.000000000000000000
+    DefaultItemStyles.ItemStyle = ''
+    DefaultItemStyles.GroupHeaderStyle = ''
+    DefaultItemStyles.GroupFooterStyle = ''
+    Viewport.Width = 269.000000000000000000
+    Viewport.Height = 271.000000000000000000
+    object AniIndicator1: TAniIndicator
+      Align = Center
+      Size.Width = 60.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      object GradientAnimation1: TGradientAnimation
+        Duration = 0.200000002980232200
+        StartValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+        StartFromCurrent = True
+        StopValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+      end
+    end
+  end
+  object ToolBar1: TToolBar
+    Size.Width = 273.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object sbRefresh: TSpeedButton
+      Action = acRefresh
+      Align = Right
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 1
+      Position.X = 228.000000000000000000
+      Size.Width = 45.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object sbClose: TSpeedButton
+      Action = acBack
+      Align = Left
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 0
+      Size.Width = 41.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object lbSensorsList: TLabel
+      Align = Center
+      StyledSettings = [Family, Style, FontColor]
+      Size.Width = 120.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 22.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'Sensors'
+    end
+  end
+  object alSensors: TActionList
+    Images = dmShared.ImageList1
+    Left = 96
+    Top = 104
+    object acBack: TAction
+      ImageIndex = 0
+      OnExecute = acBackExecute
+      OnUpdate = acBackUpdate
+      ImageIndex = 0
+    end
+    object acRefresh: TAction
+      ImageIndex = 1
+      OnExecute = acRefreshExecute
+      OnUpdate = acBackUpdate
+      ImageIndex = 1
+    end
+  end
+end

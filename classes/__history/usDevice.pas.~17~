@@ -1,0 +1,556 @@
+unit usDevice;
+
+interface
+
+uses
+  System.JSON, System.Classes, System.Types, System.SysUtils, IdBaseComponent,
+  IdComponent,
+  IdTCPConnection, IdHTTP, IdUDPBase, IdUDPClient, SyncObjs,
+  System.Generics.Collections, usJson, System.RegularExpressions,
+  FireDAC.Stan.Intf,
+  FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf,
+  FireDAC.Stan.Def, FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys,
+  Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Consts, FireDAC.DApt,
+  FireDAC.Phys.SQLiteDef,
+  FireDAC.Phys.SQLite, FireDAC.FMXUI.Wait;
+
+type
+  TRespondObject = class;
+  TOnLoadedEvent = procedure(AObject: TRespondObject) of object;
+  TEditorAction = (eaSensor, eaControl, eaSetting, eaAbout);
+  TEditorActionSet = set of TEditorAction;
+  TCustomDevice = class;
+
+  TRespondObject = class(TJsonSerializableObject)
+  private
+    [TJsonSerializableField('response_type')]
+    FResponseType: String;
+    [TJsonSerializableField('response_text')]
+    FResponseText: String;
+  public
+    property ResponseType: String read FResponseType;
+    property ResponseText: String read FResponseText;
+  end;
+
+  TDeviceDetail = class;
+  TDeviceDetailClass = class of TDeviceDetail;
+
+  TDeviceDetail = class(TRespondObject)
+  private
+  protected
+    FOwner: TCustomDevice;
+    procedure HttpGetRespond(AUrl: String; ARespond: TRespondObject; ALoadedProc: TOnLoadedEvent);
+  public
+    constructor Create(AOwner: TCustomDevice); virtual;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); virtual; abstract;
+    function Post: Boolean; virtual; abstract;
+  end;
+
+  TCustomInfo = class(TDeviceDetail)
+  private
+    [TJsonSerializableField('mac')]
+    FMac: String;
+    [TJsonSerializableField('uptime')]
+    FUpTime: String;
+    [TJsonSerializableField('heap')]
+    FHeap: Real;
+    [TJsonSerializableField('build')]
+    FBuild: String;
+    [TJsonSerializableField('sdk')]
+    FSdk: String;
+    [TJsonSerializableField('desc')]
+    FDescription: String;
+  public
+    property Mac: String read FMac;
+    property UpTime: String read FUpTime;
+    property Heap: Real read FHeap;
+    property Build: String read FBuild;
+    property Sdk: String read FSdk;
+    property Description: String read FDescription;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); override;
+  end;
+
+  TSensor = record
+    [TJsonSerializableField('id')]
+    Id: String;
+    [TJsonSerializableField('type')]
+    SensorType: String;
+    [TJsonSerializableField('val')]
+    Value: Real;
+  end;
+
+  TCustomSensors = class(TDeviceDetail)
+  private
+    FHost: String;
+    [TJsonSerializableField('sensors')]
+    FSensors: array of TSensor;
+    function Get(Index: Integer): TSensor;
+    function GetCount: Integer;
+  public
+    property Items[Index: Integer]: TSensor read Get; default;
+    property Count: Integer read GetCount;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); override;
+  end;
+
+
+  TCustomSettings = class(TDeviceDetail)
+  end;
+
+
+  TCustomControl = class(TDeviceDetail)
+
+  end;
+
+  TCustomInfoClass = class of TCustomInfo;
+  TCustomSensorsClass = class of TCustomSensors;
+  TCustomSettingsClass = class of TCustomSettings;
+  TCustomControlClass = class of TCustomControl;
+
+  TCustomDevice = class(TInterfacedPersistent)
+  private
+    FInfo: TCustomInfo;
+    FSensors: TCustomSensors;
+    FSettings: TCustomSettings;
+    FControl: TCustomControl;
+    function GetInfo: TCustomInfo;
+    function GetSensors: TCustomSensors;
+    function GetSettings: TCustomSettings;
+    function GetControl: TCustomControl;
+  protected
+    FHost, FDeviceName: String;
+  public
+    constructor Create(AHost: String; ADeviceName: String); virtual;
+    destructor Destroy; override;
+
+    property IpAddress: String read FHost;
+    property DeviceName: String read FDeviceName;
+    property Info: TCustomInfo read GetInfo;
+    property Sensors: TCustomSensors read GetSensors;
+    property Settings: TCustomSettings read GetSettings;
+    property Control: TCustomControl read GetControl;
+
+    function ClassSensors: TCustomSensorsClass; virtual;
+    function ClassInfo: TCustomInfoClass; virtual;
+    function ClassSettings: TCustomSettingsClass; virtual;
+    function ClassControl: TCustomControlClass; virtual;
+
+    function GetEditorType: TEditorActionSet; virtual;
+  end;
+
+
+  TDeviceClass = class of TCustomDevice;
+  TDevices = class;
+  TOnScanningFinished = procedure(ADevices: TDevices) of object;
+  TOnSearchFinished = procedure(ADevice: TCustomDevice) of object;
+
+  TDeviceScanner = class(TThread)
+  private
+    FPort: Integer;
+    FList: TObjectList<TCustomDevice>;
+    FCriticalSection: TCriticalSection;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(APort: Integer;
+      AList: TObjectList<TCustomDevice>); overload;
+    destructor Destroy; override;
+  end;
+
+  TDevices = class
+  private
+    FPort: Integer;
+    FList: TObjectList<TCustomDevice>;
+    FScanner: TDeviceScanner;
+    FConnection: TFDConnection;
+    FQuery: TFDQuery;
+    FOnFinished: TOnScanningFinished;
+    function Get(Index: Integer): TCustomDevice;
+    procedure OnTerminated(Sender: TObject);
+    function GetCount: Integer;
+  public
+    constructor Create(APort: Integer);
+    destructor Destroy; override;
+
+    function IndexOf(ADevice: TCustomDevice): Integer;
+
+    function Search(AIpAddress: String; AToList: Boolean = false): TCustomDevice;
+    procedure SearchAll(AOnFinished: TOnScanningFinished);
+
+    procedure LoadFromStorage;
+    procedure SaveToStorage;
+
+    property Device[Index: Integer]: TCustomDevice read Get; default;
+    property Count: Integer read GetCount;
+  end;
+
+var
+  Devices: TDevices;
+  DeviceRegister: TDictionary<String, TDeviceClass>;
+
+implementation
+
+uses
+  usUpsDevice, System.IOUtils, System.Threading;
+
+function CreateDevice(AIp: String; const ARequest: String): TCustomDevice;
+var
+  sClass: String;
+  reqExp: TRegEx;
+  math: TMatch;
+  deviceClass: TDeviceClass;
+begin
+  Result := nil;
+  reqExp := TRegEx.Create('^(.+)_(.+)$');
+  if reqExp.IsMatch(ARequest) then
+  begin
+    math := reqExp.Match(ARequest);
+    sClass := Trim(math.Groups[1].Value);
+    if (sClass <> '') and (DeviceRegister.TryGetValue(sClass, deviceClass)) then
+      Result := deviceClass.Create(AIp, ARequest);
+  end;
+end;
+
+{ TDeviceScanner }
+
+constructor TDeviceScanner.Create(APort: Integer;
+  AList: TObjectList<TCustomDevice>);
+begin
+  inherited Create(True);
+  FCriticalSection := TCriticalSection.Create;
+  FreeOnTerminate := True;
+  FPort := APort;
+  FList := AList;
+end;
+
+destructor TDeviceScanner.Destroy;
+begin
+  FreeAndNil(FCriticalSection);
+  inherited;
+end;
+
+procedure TDeviceScanner.Execute;
+var
+  sIn, sIp, sDeviceClass: String;
+  port: Word;
+  timeout: Cardinal;
+  Device: TCustomDevice;
+  udpClient: TIdUDPClient;
+begin
+  inherited;
+
+  if not Assigned(FList) then
+    Exit;
+
+  udpClient := TIdUDPClient.Create(nil);
+  FCriticalSection.Enter;
+  try
+    udpClient.port := FPort + 1;
+    udpClient.Broadcast('HI', FPort);
+    udpClient.ReceiveTimeout := 150;
+    repeat
+      sIn := udpClient.ReceiveString(sIp, port);
+      if sIn <> '' then
+      begin
+        Device := CreateDevice(sIp, sIn);
+        Device.Info.Load;
+        if Assigned(Device) then
+          FList.Add(Device);
+      end;
+    until (sIn = '');
+  finally
+    FCriticalSection.Leave;
+    FreeAndNil(udpClient);
+  end;
+end;
+
+{ TDevice }
+
+function TCustomDevice.ClassControl: TCustomControlClass;
+begin
+  Result := TCustomControl;
+end;
+
+function TCustomDevice.ClassInfo: TCustomInfoClass;
+begin
+  Result := TCustomInfo;
+end;
+
+function TCustomDevice.ClassSensors: TCustomSensorsClass;
+begin
+  Result := TCustomSensors;
+end;
+
+function TCustomDevice.ClassSettings: TCustomSettingsClass;
+begin
+  Result := TCustomSettings;
+end;
+
+constructor TCustomDevice.Create(AHost, ADeviceName: String);
+begin
+  FHost := AHost;
+  FDeviceName := ADeviceName;
+end;
+
+destructor TCustomDevice.Destroy;
+begin
+  FreeAndNil(FInfo);
+  FreeAndNil(FSensors);
+  inherited;
+end;
+
+function TCustomDevice.GetControl: TCustomControl;
+begin
+  if FControl = nil then
+    FControl := ClassControl.Create(Self);
+  Result := FControl;
+end;
+
+function TCustomDevice.getEditorType: TEditorActionSet;
+begin
+  Result := [eaAbout];
+end;
+
+function TCustomDevice.GetInfo: TCustomInfo;
+begin
+  if FInfo = nil then
+    FInfo := ClassInfo.Create(Self);
+  Result := FInfo;
+end;
+
+function TCustomDevice.GetSensors: TCustomSensors;
+begin
+  if FSensors = nil then
+    FSensors := ClassSensors.Create(Self);
+  Result := FSensors;
+end;
+
+
+function TCustomDevice.GetSettings: TCustomSettings;
+begin
+  if FSettings = nil then
+    FSettings := ClassSettings.Create(Self);
+  Result := FSettings;
+end;
+
+{ TDevices }
+
+constructor TDevices.Create(APort: Integer);
+begin
+  FPort := APort;
+  FList := TObjectList<TCustomDevice>.Create;
+  FConnection := TFDConnection.Create(nil);
+  FConnection.DriverName := S_FD_SQLiteId;
+  FConnection.Params.Database := TPath.Combine(TPath.GetDocumentsPath, 'data.s3db');
+  FConnection.LoginPrompt := false;
+  FConnection.Connected := True;
+  FQuery := TFDQuery.Create(nil);
+  FQuery.Connection := FConnection;
+  FQuery.ExecSQL('CREATE TABLE IF NOT EXISTS DEVICES(DEVICE_NAME TEXT NOT NULL, DEVICE_IP TEXT NOT NULL)');
+  LoadFromStorage;
+end;
+
+destructor TDevices.Destroy;
+begin
+  FreeAndNil(FConnection);
+  FreeAndNil(FList);
+  inherited;
+end;
+
+function TDevices.Get(Index: Integer): TCustomDevice;
+begin
+  Result := FList[Index];
+end;
+
+function TDevices.GetCount: Integer;
+begin
+  Result := FList.Count;
+end;
+
+function TDevices.IndexOf(ADevice: TCustomDevice): Integer;
+var
+  i: Integer;
+begin
+  Result := -1;
+  for i := 0 to FList.Count - 1 do
+  begin
+    if FList[i].IpAddress = ADevice.IpAddress then
+    begin
+      Result := i;
+      break;
+    end;
+  end;
+end;
+
+procedure TDevices.LoadFromStorage;
+begin
+  FList.Clear;
+  FQuery.Open('SELECT DEVICE_NAME, DEVICE_IP FROM DEVICES');
+  try
+    while not FQuery.Eof do
+    begin
+      FList.Add(CreateDevice(FQuery.FieldByName('DEVICE_IP').AsString,
+        FQuery.FieldByName('DEVICE_NAME').AsString));
+      FQuery.Next;
+    end;
+  finally
+    FQuery.Close;
+  end;
+end;
+
+procedure TDevices.OnTerminated(Sender: TObject);
+begin
+  if Assigned(FOnFinished) then
+    FOnFinished(Self);
+  SaveToStorage;
+  FOnFinished := nil;
+end;
+
+procedure TDevices.SaveToStorage;
+var
+  i: Integer;
+begin
+  FQuery.ExecSQL('DELETE FROM DEVICES');
+  FQuery.Open('SELECT DEVICE_NAME, DEVICE_IP FROM DEVICES');
+  FQuery.Edit;
+  try
+    for i := 0 to FList.Count - 1 do
+    begin
+      FQuery.Append;
+      FQuery.FieldByName('DEVICE_NAME').AsString := FList[i].DeviceName;
+      FQuery.FieldByName('DEVICE_IP').AsString := FList[i].IpAddress;
+      FQuery.Post;
+    end;
+  finally
+    FQuery.Close;
+  end;
+end;
+
+function TDevices.Search(AIpAddress: String; AToList: Boolean = false)
+  :TCustomDevice;
+var
+  sIn, sIp: String;
+  port: Word;
+  udpClient: TIdUDPClient;
+begin
+  Result := nil;
+  udpClient := TIdUDPClient.Create(nil);
+  try
+    udpClient.port := FPort + 1;
+    udpClient.Send(AIpAddress, FPort, 'HI');
+    udpClient.ReceiveTimeout := 50;
+    sIn := Trim(udpClient.ReceiveString(sIp, port));
+    if sIn <> '' then
+    begin
+      Result := CreateDevice(sIp, sIn);
+      Result.Info.Load;
+      if (AToList) and ((IndexOf(Result) = -1)) then
+        FList.Add(Result);
+    end;
+  finally
+    FreeAndNil(udpClient);
+  end;
+  SaveToStorage;
+end;
+
+procedure TDevices.SearchAll(AOnFinished: TOnScanningFinished);
+begin
+  FOnFinished := AOnFinished;
+  FList.Clear;
+  FScanner := TDeviceScanner.Create(FPort, FList);
+  FScanner.OnTerminate := OnTerminated;
+  FScanner.Start;
+end;
+
+{ TDeviceSensors }
+
+function TCustomSensors.Get(Index: Integer): TSensor;
+begin
+  Result := FSensors[Index];
+end;
+
+function TCustomSensors.GetCount: Integer;
+begin
+  Result := Length(FSensors);
+end;
+
+procedure TCustomSensors.Load(ALoadedProc: TOnLoadedEvent);
+begin
+  HttpGetRespond(Format('http://%s/rpc/sensors.json', [FOwner.IpAddress]), Self, ALoadedProc);
+end;
+
+{ TCustomMethod }
+
+constructor TDeviceDetail.Create(AOwner: TCustomDevice);
+begin
+  FOwner := AOwner;
+end;
+
+procedure TDeviceDetail.HttpGetRespond(AUrl: String; ARespond: TRespondObject; ALoadedProc: TOnLoadedEvent);
+var
+  stream: TStringStream;
+  task: ITask;
+begin
+  task := TTask.Create(procedure()
+  var
+    res: Boolean;
+    idHTTP: TIdHTTP;
+  begin
+
+    idHTTP := TIdHTTP.Create(nil);
+    try
+      stream := TStringStream.Create;
+      try
+        try
+          idHTTP.Get(AUrl, stream);
+        except
+          on e: Exception do
+          begin
+            ARespond.FResponseText := e.Message;
+            ARespond.FResponseType := 'fail';
+            stream.clear;
+          end;
+        end;
+        if stream.Size > 0 then
+        begin
+          ARespond.parceJson(stream.DataString);
+          if Assigned(ALoadedProc) then
+          TThread.Synchronize(nil,procedure
+          begin
+            ALoadedProc(ARespond);
+          end);
+        end;
+      finally
+        FreeAndNil(stream);
+      end;
+    finally
+      FreeAndNil(idHTTP);
+    end;
+  end);
+  task.Start;
+
+  if not Assigned(ALoadedProc) then
+    task.Wait;
+end;
+
+
+{ TCustomInfo }
+
+procedure TCustomInfo.Load(ALoadedProc: TOnLoadedEvent = nil);
+begin
+  HttpGetRespond(Format('http://%s/rpc/info.json', [FOwner.IpAddress]), Self, ALoadedProc);
+end;
+
+initialization
+
+DeviceRegister := TDictionary<String, TDeviceClass>.Create;
+DeviceRegister.Add('UPS', TUpsDevice);
+Devices := TDevices.Create(8312);
+
+finalization
+
+FreeAndNil(DeviceRegister);
+
+end.

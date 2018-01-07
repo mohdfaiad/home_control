@@ -1,0 +1,94 @@
+object frmSchedule: TfrmSchedule
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 421
+  ClientWidth = 246
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnClose = FormClose
+  DesignerMasterStyle = 0
+  object teFrom: TTimeEdit
+    Time = 0.906944444444444400
+    OnChange = teFromChange
+    Position.X = 128.000000000000000000
+    Position.Y = 69.000000000000000000
+    TabOrder = 2
+  end
+  object lbFrom: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 70.000000000000000000
+    Size.Width = 97.000000000000000000
+    Size.Height = 24.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Time From:'
+  end
+  object tbControl: TToolBar
+    Size.Width = 246.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object sbClose: TSpeedButton
+      Action = acBack
+      Align = Left
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 0
+      Size.Width = 41.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object lbSettings: TLabel
+      Align = Center
+      StyledSettings = [Family, Style, FontColor]
+      Size.Width = 120.000000000000000000
+      Size.Height = 29.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 22.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'Schedule'
+    end
+  end
+  object teTo: TTimeEdit
+    Time = 0.906944444444444400
+    OnChange = teToChange
+    Position.X = 128.000000000000000000
+    Position.Y = 105.000000000000000000
+    TabOrder = 1
+  end
+  object lbTo: TLabel
+    Position.X = 8.000000000000000000
+    Position.Y = 105.000000000000000000
+    Size.Width = 97.000000000000000000
+    Size.Height = 21.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Time To:'
+  end
+  object swState: TSwitch
+    IsChecked = False
+    Position.X = 8.000000000000000000
+    Position.Y = 144.000000000000000000
+    TabOrder = 5
+    OnSwitch = swStateSwitch
+  end
+  object lbState: TLabel
+    Position.X = 96.000000000000000000
+    Position.Y = 144.000000000000000000
+    Size.Width = 129.000000000000000000
+    Size.Height = 25.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'State'
+  end
+  object alSchedule: TActionList
+    Images = dmShared.ImageList1
+    Left = 96
+    Top = 296
+    object acBack: TAction
+      ImageIndex = 0
+      OnExecute = acBackExecute
+      ImageIndex = 0
+    end
+  end
+end

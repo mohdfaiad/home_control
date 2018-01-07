@@ -1,0 +1,19 @@
+inherited frmConnect_NmXhdpiPh: TfrmConnect_NmXhdpiPh
+  ClientHeight = 615
+  ClientWidth = 400
+  DesignerMasterStyle = 3
+  inherited GridPanelLayout2: TGridPanelLayout
+    Position.Y = 556.000000000000000000
+    Size.Width = 400.000000000000000000
+    inherited btnOk: TButton
+      Position.X = 240.000000000000000000
+    end
+    inherited btnScan: TButton
+      Position.X = 40.000000000000000000
+    end
+  end
+  inherited lbDevices: TListBox
+    Size.Width = 400.000000000000000000
+    Size.Height = 556.000000000000000000
+  end
+end

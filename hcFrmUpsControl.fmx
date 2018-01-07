@@ -1,0 +1,85 @@
+object frmUpsControl: TfrmUpsControl
+  Left = 0
+  Top = 0
+  Caption = 'Form1'
+  ClientHeight = 358
+  ClientWidth = 262
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnClose = FormClose
+  DesignerMasterStyle = 0
+  object swAuto: TSwitch
+    IsChecked = False
+    Position.X = 16.000000000000000000
+    Position.Y = 120.000000000000000000
+    Size.Width = 57.000000000000000000
+    Size.Height = 27.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    OnSwitch = swAutoSwitch
+  end
+  object tbControl: TToolBar
+    Size.Width = 262.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    object sbClose: TSpeedButton
+      Action = acBack
+      Align = Left
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 0
+      Size.Width = 41.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object lbControl: TLabel
+      Align = Center
+      StyledSettings = [Family, Style, FontColor]
+      Size.Width = 120.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 22.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'Control'
+    end
+  end
+  object lbActive: TLabel
+    Position.X = 88.000000000000000000
+    Position.Y = 72.000000000000000000
+    Size.Width = 161.000000000000000000
+    Size.Height = 25.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Active'
+  end
+  object lbAuto: TLabel
+    Position.X = 88.000000000000000000
+    Position.Y = 123.000000000000000000
+    Size.Width = 153.000000000000000000
+    Size.Height = 23.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Auto mode'
+  end
+  object swActive: TSwitch
+    IsChecked = False
+    Position.X = 16.000000000000000000
+    Position.Y = 72.000000000000000000
+    Size.Width = 57.000000000000000000
+    Size.Height = 27.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 2
+    OnSwitch = swActiveSwitch
+  end
+  object alControl: TActionList
+    Images = dmShared.ImageList1
+    Left = 104
+    Top = 200
+    object acBack: TAction
+      ImageIndex = 0
+      OnExecute = acBackExecute
+      ImageIndex = 0
+    end
+  end
+end

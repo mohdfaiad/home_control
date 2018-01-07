@@ -1,0 +1,93 @@
+object frmDeviceInfo: TfrmDeviceInfo
+  Left = 0
+  Top = 0
+  Caption = 'Form3'
+  ClientHeight = 422
+  ClientWidth = 302
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnClose = FormClose
+  OnCloseQuery = FormCloseQuery
+  DesignerMasterStyle = 0
+  object ToolBar1: TToolBar
+    Anchors = []
+    Size.Width = 302.000000000000000000
+    Size.Height = 40.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object sbBack: TSpeedButton
+      Action = acBack
+      Align = Left
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 0
+      Size.Width = 33.000000000000000000
+      Size.Height = 40.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object lbAbout: TLabel
+      Align = Center
+      StyledSettings = [Family, Style, FontColor]
+      Size.Width = 120.000000000000000000
+      Size.Height = 29.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 22.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'About'
+    end
+  end
+  object lvDeviceProperties: TListBox
+    Align = Client
+    Size.Width = 302.000000000000000000
+    Size.Height = 382.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    DisableFocusEffect = True
+    DefaultItemStyles.ItemStyle = ''
+    DefaultItemStyles.GroupHeaderStyle = ''
+    DefaultItemStyles.GroupFooterStyle = ''
+    Viewport.Width = 298.000000000000000000
+    Viewport.Height = 378.000000000000000000
+    object AniIndicator1: TAniIndicator
+      Align = Center
+      Size.Width = 60.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      object GradientAnimation1: TGradientAnimation
+        Duration = 0.200000002980232200
+        StartValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+        StartFromCurrent = True
+        StopValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+      end
+    end
+  end
+  object alInfo: TActionList
+    Images = dmShared.ImageList1
+    Left = 40
+    Top = 120
+    object acBack: TAction
+      ImageIndex = 0
+      OnExecute = acBackExecute
+      OnUpdate = acBackUpdate
+      ImageIndex = 0
+    end
+  end
+end

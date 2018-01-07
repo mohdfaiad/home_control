@@ -1,0 +1,44 @@
+inherited frmSearchDevices_LgXhdpiPh: TfrmSearchDevices_LgXhdpiPh
+  ClientHeight = 695
+  ClientWidth = 450
+  DesignerMasterStyle = 3
+  inherited tbTop: TToolBar
+    Size.Width = 450.000000000000000000
+    inherited sbOverflowMenu: TSpeedButton
+      Position.X = 397.000000000000000000
+    end
+    inherited edSearchIp: TEdit
+      Size.Width = 355.000000000000000000
+      Size.Height = 32.000000000000000000
+      inherited sbSearchDevice: TSearchEditButton
+        Size.Height = 32.000000000000000000
+      end
+    end
+    inherited lbIp: TLabel
+      Text = 'IP :'
+    end
+  end
+  inherited lbDevices: TListBox
+    Size.Width = 450.000000000000000000
+    Size.Height = 647.000000000000000000
+    Viewport.Width = 450.000000000000000000
+    Viewport.Height = 647.000000000000000000
+    inherited lbPopup: TListBox
+      Viewport.Width = 200.000000000000000000
+      Viewport.Height = 76.000000000000000000
+    end
+  end
+  inherited lbOverflowMenu: TListBox
+    Position.X = 226.000000000000000000
+    Size.Width = 221.000000000000000000
+    Size.Height = 91.000000000000000000
+    DefaultItemStyles.ItemStyle = 'listboxitemnodetail'
+    Viewport.Width = 139.000000000000000000
+    Viewport.Height = 89.000000000000000000
+    inherited lbiScanDevices: TListBoxItem
+      Selectable = False
+      Position.Y = 44.000000000000000000
+      Size.Width = 221.000000000000000000
+    end
+  end
+end

@@ -1,0 +1,383 @@
+unit usUpsDevice;
+
+interface
+
+uses
+  usJson, usDevice, System.SysUtils, System.Classes, System.Generics.Collections;
+
+type
+  TUpsDevice = class;
+
+  TScheduleTime = record
+    modified: Boolean;
+    [TJsonSerializableField('hour')]
+    hour: Integer;
+    [TJsonSerializableField('min')]
+    min: Integer;
+
+    function toTime: TDateTime;
+    procedure setTime(AValue: TDateTime);
+  end;
+
+  TSchedule = class(TDeviceDetail)
+  private
+    FModified: Boolean;
+    FIndex: Integer;
+    [TJsonSerializableField('enabled')]
+    FEnabled: Boolean;
+    [TJsonSerializableField('state')]
+    FState: Boolean;
+    [TJsonSerializableField('start')]
+    FStart: TScheduleTime;
+    [TJsonSerializableField('end')]
+    FEnd: TScheduleTime;
+    procedure setEnabled(const Value: Boolean);
+    procedure setState(const Value: Boolean);
+  public
+    constructor Create(AOwner: TCustomDevice; AIndex: Integer);
+    property ItemIndex: Integer read FIndex;
+    property Enabled: Boolean read FEnabled write setEnabled;
+    property State: Boolean read FState write setState;
+    property StartHour: TScheduleTime read FStart write FStart;
+    property EndHour: TScheduleTime read FEnd write FEnd;
+
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); override;
+    function Post: Boolean; override;
+    function IsModified: Boolean;
+
+    function toString: String;
+  end;
+
+  TSchedules = class(TDeviceDetail)
+  private
+    [TJsonSerializableField('count')]
+    FCount: Integer;
+    FList: TDictionary<Integer,TSchedule>;
+    function GetItem(Index: Integer): TSchedule;
+  public
+    destructor Destroy; override;
+
+    property Count: Integer read FCount;
+    property Items[Index: Integer]: TSchedule read GetItem; default;
+
+    function IsModified: Boolean;
+    function Post: Boolean; override;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); override;
+  end;
+
+
+  TUpsCotrol = class(TCustomControl)
+  private
+    FHost: String;
+    [TJsonSerializableField('relay')]
+    FActivate: Boolean;
+    [TJsonSerializableField('auto_mode')]
+    FAutoMode: Boolean;
+    [TJsonSerializableField('active_shedule')]
+    FActiveSchedule: Integer;
+    FSchedules: TSchedules;
+    procedure setActivate(const Value: Boolean);
+    procedure setAutoMode(const Value: Boolean);
+  public
+    property Activate: Boolean read FActivate write setActivate;
+    property IsAutoMode: Boolean read FAutoMode write setAutoMode;
+    property ActiveScheduleIndex: Integer read FActiveSchedule;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent); override;
+  end;
+
+
+  TUpsSetting = class(TCustomSettings)
+  private
+    [TJsonSerializableField('ntp')]
+    FNtp: String;
+    [TJsonSerializableField('always_on')]
+    FAlwaysOn: Boolean;
+    [TJsonSerializableField('auto_mode')]
+    FAutoMode: Boolean;
+    FSchedules: TSchedules;
+    FModified: Boolean;
+    function GetSchedules: TSchedules;
+    procedure setAlwaysOn(const Value: Boolean);
+    procedure setAutoMode(const Value: Boolean);
+    procedure setNtp(const Value: String);
+  public
+    destructor Destroy; override;
+
+    property NTP: String read FNtp write setNtp;
+    property AlwaysOn: Boolean read FAlwaysOn write setAlwaysOn;
+    property AutoMode: Boolean read FAutoMode write setAutoMode;
+
+    property Schedules: TSchedules read GetSchedules;
+
+    procedure Load(ALoadedProc: TOnLoadedEvent = nil); override;
+    function Post: Boolean; override;
+    function IsModified: Boolean;
+  end;
+
+  TUpsDevice = class(TCustomDevice)
+  private
+  protected
+    function GetEditorType: TEditorActionSet; override;
+    function ClassControl: TCustomControlClass; override;
+    function ClassSettings: TCustomSettingsClass; override;
+  public
+
+  end;
+
+implementation
+
+const
+  URL_RELAY = 'http://%s/rpc/relay.json';
+
+{ TUPSDevice }
+
+function TUpsDevice.ClassControl: TCustomControlClass;
+begin
+  Result := TUpsCotrol;
+end;
+
+function TUpsDevice.ClassSettings: TCustomSettingsClass;
+begin
+  Result := TUpsSetting;
+end;
+
+function TUpsDevice.GetEditorType: TEditorActionSet;
+begin
+  Result := inherited + [eaSensor, eaControl, eaSetting];
+end;
+
+{ TUpsRelay }
+
+procedure TUpsCotrol.Load(ALoadedProc: TOnLoadedEvent);
+begin
+  HttpGetRespond(Format('http://%s/rpc/relay.json',[FOwner.IpAddress]), Self, ALoadedProc);
+end;
+
+procedure TUpsCotrol.setActivate(const Value: Boolean);
+var
+  respond: TRespondObject;
+begin
+  respond := TRespondObject.Create;
+  try
+    if Value then
+      HttpGetRespond(Format('http://%s/rpc/relay/on.do',[FOwner.IpAddress]), respond, nil)
+    else
+      HttpGetRespond(Format('http://%s/rpc/relay/off.do',[FOwner.IpAddress]), respond, nil);
+    if respond.ResponseType = 'success' then
+      FActivate := Value;
+  finally
+    FreeAndNil(respond);
+  end;
+end;
+
+procedure TUpsCotrol.setAutoMode(const Value: Boolean);
+var
+  respond: TRespondObject;
+begin
+  respond := TRespondObject.Create;
+  try
+    if Value then
+      HttpGetRespond(Format('http://%s/rpc/relay/auto.do',[FOwner.IpAddress]), respond, nil);
+    if respond.ResponseType = 'success' then
+      FAutoMode := Value;
+  finally
+    FreeAndNil(respond);
+  end;
+end;
+
+{ TUpsSetting }
+
+destructor TUpsSetting.Destroy;
+begin
+  FreeAndNil(FSchedules);
+  inherited;
+end;
+
+function TUpsSetting.GetSchedules: TSchedules;
+begin
+  if not Assigned(FSchedules) then
+    FSchedules := TSchedules.Create(FOwner);
+  Result := FSchedules;
+end;
+
+function TUpsSetting.IsModified: Boolean;
+begin
+  Result := FModified or Schedules.IsModified;
+end;
+
+procedure TUpsSetting.Load(ALoadedProc: TOnLoadedEvent);
+begin
+  HttpGetRespond(Format('http://%s/rpc/setting.json',[FOwner.IpAddress]), Self, ALoadedProc);
+end;
+
+function TUpsSetting.Post: Boolean;
+var
+  item: TRespondObject;
+begin
+  if FModified then
+  begin
+    item := TRespondObject.Create;
+    try
+      HttpGetRespond(Format('http://%s/rpc/setting.json?json=%s',[FOwner.IpAddress, self.toJson]), item, nil);
+      Result := item.ResponseType = 'success';
+    finally
+      FreeAndNil(item);
+    end;
+  end;
+
+  if Schedules.IsModified then
+    Schedules.Post;
+
+  FModified := True;
+end;
+
+procedure TUpsSetting.setAlwaysOn(const Value: Boolean);
+begin
+  FAlwaysOn := Value;
+  FModified := True;
+end;
+
+procedure TUpsSetting.setAutoMode(const Value: Boolean);
+begin
+  FAutoMode := Value;
+  FModified := True;
+end;
+
+procedure TUpsSetting.setNtp(const Value: String);
+begin
+  FNtp := Value;
+  FModified := True;
+end;
+
+{ TSchedules }
+
+destructor TSchedules.Destroy;
+begin
+
+  inherited;
+end;
+
+function TSchedules.GetItem(Index: Integer): TSchedule;
+var
+  item: TSchedule;
+begin
+  if not Assigned(FList) then
+    FList := TDictionary<Integer,TSchedule>.Create;
+
+  if not FList.TryGetValue(Index, item) then
+  begin
+    item := TSchedule.Create(FOwner, Index);
+    FList.Add(Index, item);
+  end;
+
+  Result := item;
+end;
+
+function TSchedules.IsModified: Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to FCount - 1 do
+  begin
+    if Items[i].IsModified then
+    begin
+      Result := True;
+      Break;
+    end;
+  end;
+end;
+
+procedure TSchedules.Load(ALoadedProc: TOnLoadedEvent);
+begin
+  HttpGetRespond(Format('http://%s/rpc/setting/schedule.json',[FOwner.IpAddress]), Self, nil);
+end;
+
+function TSchedules.Post: Boolean;
+var
+  i: Integer;
+begin
+  Result := False;
+  for i := 0 to FCount - 1 do
+  begin
+    if Items[i].IsModified then
+    begin
+      Result := True;
+      Items[i].Post;
+    end;
+  end;
+
+end;
+
+{ TUpsSchedule }
+
+constructor TSchedule.Create(AOwner: TCustomDevice; AIndex: Integer);
+begin
+  inherited Create(AOwner);
+  FIndex := AIndex;
+end;
+
+function TSchedule.IsModified: Boolean;
+begin
+  Result := FModified or FStart.modified or FEnd.modified;
+end;
+
+procedure TSchedule.Load(ALoadedProc: TOnLoadedEvent);
+begin
+  HttpGetRespond(Format('http://%s/rpc/setting/schedule.json?index=%d',[FOwner.IpAddress, FIndex]), Self, nil);
+end;
+
+function TSchedule.Post: Boolean;
+var
+  item: TRespondObject;
+begin
+  item := TRespondObject.Create;
+  try
+    HttpGetRespond(Format('http://%s/rpc/setting/schedule.json?index=%d&json=%s',[FOwner.IpAddress, FIndex, Self.toJson]), item, nil);
+    Result := item.ResponseType = 'success';
+  finally
+    FreeAndNil(item);
+  end;
+  FModified := False;
+  FStart.modified := False;
+  FEnd.modified := False;
+end;
+
+procedure TSchedule.setEnabled(const Value: Boolean);
+begin
+  FEnabled := Value;
+  FModified := True;
+end;
+
+procedure TSchedule.setState(const Value: Boolean);
+begin
+  FState := Value;
+  FModified := True;
+end;
+
+function TSchedule.toString: String;
+begin
+  Result := Format('%.2d:%.2d - %.2d:%.2d', [StartHour.hour, StartHour.min, EndHour.hour, EndHour.min]);
+end;
+
+{ TScheduleTime }
+
+procedure TScheduleTime.setTime(AValue: TDateTime);
+var
+  thour, tmin, tsec, tmsec: Word;
+begin
+  DecodeTime(AValue, thour, tmin, tsec, tmsec);
+  hour := thour;
+  min := tmin;
+  modified := True;
+end;
+
+function TScheduleTime.toTime: TDateTime;
+begin
+  Result := EncodeTime(hour, min, 0, 0);
+end;
+
+end.

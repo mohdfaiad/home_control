@@ -1,0 +1,15 @@
+inherited frmSearchDevices_NmXhdpiPh: TfrmSearchDevices_NmXhdpiPh
+  ClientHeight = 615
+  ClientWidth = 400
+  DesignerMasterStyle = 3
+  inherited lbDevices: TListView
+    Size.Width = 400.000000000000000000
+    Size.Height = 567.000000000000000000
+  end
+  inherited tbTop: TToolBar
+    Size.Width = 400.000000000000000000
+    inherited sbOverflowMenu: TSpeedButton
+      Position.X = 347.000000000000000000
+    end
+  end
+end

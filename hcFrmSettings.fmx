@@ -1,0 +1,190 @@
+object frmUpsSettings: TfrmUpsSettings
+  Left = 0
+  Top = 0
+  Caption = 'Settings'
+  ClientHeight = 514
+  ClientWidth = 262
+  StyleBook = dmShared.sbListBox
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnClose = FormClose
+  DesignerMasterStyle = 3
+  object tbControl: TToolBar
+    Size.Width = 262.000000000000000000
+    Size.Height = 48.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 0
+    object sbClose: TSpeedButton
+      Action = acBack
+      Align = Left
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 0
+      Size.Width = 41.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+    object lbSettings: TLabel
+      Align = Center
+      StyledSettings = [Family, Style, FontColor]
+      Size.Width = 120.000000000000000000
+      Size.Height = 29.000000000000000000
+      Size.PlatformDefault = False
+      TextSettings.Font.Size = 22.000000000000000000
+      TextSettings.HorzAlign = Center
+      Text = 'Settings'
+    end
+    object sbSave: TSpeedButton
+      Action = acSave
+      Align = Right
+      Enabled = True
+      Images = dmShared.ImageList1
+      ImageIndex = 2
+      Position.X = 221.000000000000000000
+      Size.Width = 41.000000000000000000
+      Size.Height = 48.000000000000000000
+      Size.PlatformDefault = False
+      Visible = True
+    end
+  end
+  object lbSchedules: TListBox
+    Align = Client
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 5.000000000000000000
+    Margins.Right = 10.000000000000000000
+    Margins.Bottom = 10.000000000000000000
+    Size.Width = 242.000000000000000000
+    Size.Height = 274.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    DisableFocusEffect = True
+    ItemHeight = 45.000000000000000000
+    DefaultItemStyles.ItemStyle = ''
+    DefaultItemStyles.GroupHeaderStyle = ''
+    DefaultItemStyles.GroupFooterStyle = ''
+    Viewport.Width = 242.000000000000000000
+    Viewport.Height = 274.000000000000000000
+    object AniIndicator1: TAniIndicator
+      Align = Center
+      Size.Width = 60.000000000000000000
+      Size.Height = 50.000000000000000000
+      Size.PlatformDefault = False
+      object GradientAnimation1: TGradientAnimation
+        Duration = 0.200000002980232200
+        StartValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+        StartFromCurrent = True
+        StopValue.Points = <
+          item
+            Color = claBlack
+            Offset = 0.000000000000000000
+          end
+          item
+            Color = claWhite
+            Offset = 1.000000000000000000
+          end>
+      end
+    end
+  end
+  object Layout1: TLayout
+    Align = Top
+    Position.Y = 48.000000000000000000
+    Size.Width = 262.000000000000000000
+    Size.Height = 145.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 3
+    object edNTP: TEdit
+      Touch.InteractiveGestures = [LongTap, DoubleTap]
+      Anchors = [akLeft, akTop, akRight]
+      TabOrder = 0
+      Position.X = 80.000000000000000000
+      Position.Y = 13.000000000000000000
+      Size.Width = 169.000000000000000000
+      Size.Height = 32.000000000000000000
+      Size.PlatformDefault = False
+      OnChange = edNTPChange
+    end
+    object lbNtp: TLabel
+      Position.X = 16.000000000000000000
+      Position.Y = 16.000000000000000000
+      Size.Width = 49.000000000000000000
+      Size.Height = 25.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'NTP:'
+    end
+    object lbAlwaysOn: TLabel
+      Position.X = 88.000000000000000000
+      Position.Y = 56.000000000000000000
+      Size.Width = 161.000000000000000000
+      Size.Height = 25.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Always On'
+    end
+    object lbAuto: TLabel
+      Position.X = 88.000000000000000000
+      Position.Y = 98.000000000000000000
+      Size.Width = 161.000000000000000000
+      Size.Height = 23.000000000000000000
+      Size.PlatformDefault = False
+      Text = 'Auto mode'
+    end
+    object swAlways: TSwitch
+      IsChecked = False
+      Position.X = 16.000000000000000000
+      Position.Y = 56.000000000000000000
+      Size.Width = 44.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 4
+      OnSwitch = swAlwaysSwitch
+    end
+    object swAuto: TSwitch
+      IsChecked = False
+      Position.X = 16.000000000000000000
+      Position.Y = 94.000000000000000000
+      Size.Width = 44.000000000000000000
+      Size.Height = 26.000000000000000000
+      Size.PlatformDefault = False
+      TabOrder = 5
+      OnSwitch = swAutoSwitch
+    end
+  end
+  object lbSchedule: TLabel
+    Align = Top
+    Margins.Left = 10.000000000000000000
+    Margins.Top = 5.000000000000000000
+    Margins.Right = 10.000000000000000000
+    Position.X = 10.000000000000000000
+    Position.Y = 198.000000000000000000
+    Size.Width = 242.000000000000000000
+    Size.Height = 27.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Schedule:'
+  end
+  object alSettings: TActionList
+    Images = dmShared.ImageList1
+    Left = 192
+    Top = 176
+    object acSave: TAction
+      ImageIndex = 2
+      OnExecute = acSaveExecute
+      OnUpdate = acSaveUpdate
+      ImageIndex = 2
+    end
+    object acBack: TAction
+      ImageIndex = 0
+      OnExecute = acBackExecute
+      OnUpdate = acBackUpdate
+      ImageIndex = 0
+    end
+  end
+end

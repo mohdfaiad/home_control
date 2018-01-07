@@ -1,0 +1,338 @@
+unit hcJson;
+
+interface
+
+uses  Classes, SysUtils, Rtti, TypInfo, System.Generics.Collections,
+  System.Generics.Defaults;
+
+type
+  TMemberVisibilitySet = set of TMemberVisibility;
+  TJsonSerializableField = class(TCustomAttribute)
+  private
+    FFieldName: String;
+  public
+    constructor Create(const AFieldName: String);
+    property FieldName: String read FFieldName;
+  end;
+
+  TJsonSerializableObject = class(TInterfacedPersistent)
+  public
+    function toJson: String;
+    procedure parceJson(AJson: String);
+  end;
+
+var
+  JSONDateTimeFormatSetting : TFormatSettings;
+
+implementation
+
+uses JSON;
+const
+  C_BOOLEAN = 'Boolean';
+
+{ TJsonObject }
+
+procedure TJsonSerializableObject.parceJson(AJson: String);
+var
+  root : TJSONObject;
+  procedure LoadFromJSONObject(AChildObject: TObject; AJSONValue: TJSONObject);
+  var
+    context: TRttiContext;
+    ctype: TRttiType;
+    field: TRttiField;
+    attr: TCustomAttribute;
+    tag: String;
+    val: TValue;
+
+    procedure PutValue(AJSONValue: TJSONValue; var AValue: TValue);
+    var
+      val, arrval: TValue;
+      obj: TObject;
+      arrlen: LongInt;
+      j, intVal: Integer;
+      intVal64: Int64;
+      floatVal: Extended;
+      strVal, fieldName: String;
+      chrVal: WideChar;
+      varVal : variant;
+      dateValue: TDateTime;
+      boolVal : boolean;
+      item: TCollectionItem;
+      arr: TJSONArray;
+      rfields: TArray<TRttiField>;
+      rtype: TRttiType;
+      attr: TCustomAttribute;
+      field: TRttiField;
+      arrObjectClass: TClass;
+    begin
+      if AJSONValue = nil then
+        Exit;
+
+      case AValue.TypeInfo.Kind of
+        tkEnumeration :
+        begin
+          if CompareText(AValue.TypeInfo.NameFld.ToString,C_BOOLEAN)=0 then
+          boolVal := false;
+          if not (AJSONValue is TJSONNull) then
+             boolVal := AJSONValue.GetValue<boolean>;
+          TValue.Make(@boolVal,TypeInfo(Boolean),AValue);
+        end;
+
+        tkVariant :
+        begin
+          varVal := varNull;
+          if not (AJSONValue is TJSONNull) then
+             varVal := AJSONValue.GetValue<String>;
+          TValue.Make(@varVal,TypeInfo(Variant),AValue);
+        end;
+        tkInteger: begin
+          intVal := 0;
+          if not (AJSONValue is TJSONNull) then
+            intVal := AJSONValue.GetValue<Integer>;
+          TValue.Make(@intVal, TypeInfo(Integer), AValue);
+        end;
+        tkInt64: begin
+          intVal64 := 0;
+          if not (AJSONValue is TJSONNull) then
+            intVal64 := AJSONValue.GetValue<Int64>;
+          TValue.Make(@intVal64, TypeInfo(Int64), AValue);
+        end;
+        tkFloat: begin
+          if AValue.TypeInfo = TypeInfo(TDateTime) then
+          begin
+            if not (AJSONValue is TJSONNull) then
+            if TryStrToDateTime(AJSONValue.Value, dateValue, JSONDateTimeFormatSetting) then
+              TValue.Make(@dateValue, TypeInfo(TDateTime), AValue);
+          end
+          else
+          begin
+            floatVal := 0;
+            if not (AJSONValue is TJSONNull) then
+              floatVal := AJSONValue.GetValue<Extended>;
+            TValue.Make(@floatVal, TypeInfo(Extended), AValue);
+          end;
+        end;
+        tkRecord: begin
+          if (AJSONValue is TJSONObject) then
+          begin
+            rtype := TRTTIContext.Create.GetType(AValue.TypeInfo);
+            try
+              for field in rtype.GetFields do
+              begin
+                for attr in field.GetAttributes do
+                if attr is TJsonSerializableField then
+                begin
+                  fieldName := TJsonSerializableField(attr).FieldName;
+                  val := field.GetValue(AValue.GetReferenceToRawData);
+                  PutValue((AJSONValue as TJSONObject).Values[fieldName], val);
+                  field.SetValue(AValue.GetReferenceToRawData, val);
+                end;
+              end;
+            finally
+              FreeAndNil(rtype);
+            end;
+          end;
+        end;
+        tkChar, tkWChar:begin
+          chrVal := #0;
+          if not (AJSONValue is TJSONNull) then
+            chrVal := AJSONValue.GetValue<WideChar>;
+          TValue.Make(@chrVal, TypeInfo(WideChar), AValue);
+        end;
+        tkSet: begin
+          if not (AJSONValue is TJSONNull) then
+          begin
+            intVal := StringToSet(AValue.TypeInfo, AJSONValue.Value);
+            TValue.Make(@intVal, AValue.TypeInfo, AValue);
+          end;
+        end;
+        tkClass: begin
+           if (not (AJSONValue is TJSONNull)) and (AValue.AsObject <> nil) then
+           begin
+             if AValue.AsObject.InheritsFrom(TCollection) then
+             begin
+               arr := AJSONValue as TJSONArray;
+               for j := 0 to arr.Count - 1 do
+                 LoadFromJSONObject(TCollection(AValue.AsObject).Add, TJSONObject(arr.Items[j]));
+             end
+             else
+               LoadFromJSONObject(AValue.AsObject, TJSONObject(AJSONValue));
+           end;
+        end;
+        tkDynArray: begin
+          if (not (AJSONValue is TJSONNull)) then
+          begin
+            arr := AJSONValue as TJSONArray;
+            arrval := AValue;
+
+            if arrval.GetArrayLength = 0 then
+            begin
+              arrlen := arr.Count;
+              DynArraySetLength(PPointer(arrval.GetReferenceToRawData)^, arrval.TypeInfo, 1, @arrlen);
+            end;
+
+            for j := 0 to arrval.GetArrayLength - 1 do
+            begin
+              if j < arr.Count then
+              begin
+                val := arrval.GetArrayElement(j);
+                if (val.IsObject) and (val.AsObject = nil) then
+                begin
+                  arrObjectClass := val.TypeInfo.TypeData.ClassType;
+                  obj := arrObjectClass.Create;
+                  TValue.Make(@obj, val.TypeInfo, val);
+                end;
+                PutValue(arr.Items[j], val);
+                arrval.SetArrayElement(j, val);
+              end;
+            end;
+            TValue.Make(arrval.GetReferenceToRawData, arrval.TypeInfo, AValue);
+          end;
+        end;
+        tkString, tkWString, tkLString, tkUString: begin
+          strVal := '';
+          if (not (AJSONValue is TJSONNull)) then
+            strVal := AJSONValue.Value;
+          TValue.Make(@strVal, TypeInfo(String), AValue);
+        end;
+      end;
+    end;
+
+  begin
+    context := TRttiContext.Create;
+    try
+      ctype := context.GetType(AChildObject.ClassType);
+      for field in ctype.GetFields do
+      begin
+        for attr in field.GetAttributes do
+        if attr is TJsonSerializableField then
+        begin
+          tag := TJsonSerializableField(attr).FieldName;
+          val := field.GetValue(AChildObject);
+          PutValue(AJSONValue.GetValue(tag), val);
+          field.SetValue(AChildObject, val);
+        end;
+      end;
+    finally
+      context.Free;
+    end;
+  end;
+begin
+  try
+    root := TJSONObject(TJSONObject.ParseJSONValue(AJson));
+    LoadFromJSONObject(Self, root);
+  finally
+    FreeAndNil(root);
+  end;
+end;
+
+function TJsonSerializableObject.toJson: String;
+  function CreateJSONObject(AObject: TObject): TJSONObject;
+  var
+    context: TRttiContext;
+    ctype: TRttiType;
+    field: TRttiField;
+    attr: TCustomAttribute;
+    ws, tag: String;
+    function GetValue(AObj: TValue):TJSONValue;
+    var
+      i, j:Integer;
+      rtype: TRttiType;
+      rfields: TArray<TRttiField>;
+      obj: TJSONObject;
+    begin
+      case AObj.Kind of
+        tkEnumeration :
+        begin
+          if AObj.TypeInfo = TypeInfo(Boolean) then
+            Result := TJSONBool.Create(AObj.AsBoolean);
+        end;
+        tkVariant :
+        begin
+          Result := TJSONString.Create(AObj.AsString);
+        end;
+        tkInteger: Result := TJSONNumber.Create(AObj.AsInteger);
+        tkInt64: Result := TJSONNumber.Create(AObj.AsInt64);
+        tkFloat: begin
+          if AObj.TypeInfo = TypeInfo(TDateTime) then
+            Result := TJSONString.Create(DateTimeToStr(AObj.AsExtended, JSONDateTimeFormatSetting))
+          else
+            Result := TJSONNumber.Create(AObj.AsExtended);
+        end;
+        tkRecord: begin
+          rtype := TRTTIContext.Create.GetType(AObj.TypeInfo);
+          try
+            rfields := rtype.GetFields;
+            Result := TJSONObject.Create;
+            for j := 0 to High(rfields) do
+              TJSONObject(Result).AddPair(rfields[j].Name, GetValue(rfields[j].GetValue(Pointer(AObj.GetReferenceToRawData))));
+          finally
+            FreeAndNil(rtype);
+          end;
+        end;
+        tkSet: begin
+          Result := TJSONString.Create(AObj.ToString);
+        end;
+        tkClass: begin
+           if AObj.AsObject.InheritsFrom(TCollection) then
+           begin
+             Result := TJSONArray.Create;
+             for j := 0 to (AObj.AsObject as TCollection).Count - 1 do
+                TJSONArray(Result).AddElement(CreateJSONObject((AObj.AsObject as TCollection).Items[j]));
+           end
+           else
+             Result := CreateJSONObject(AObj.AsObject);
+        end;
+        tkDynArray: begin
+          Result := TJSONArray.Create;
+          for i := 0 to AObj.GetArrayLength - 1 do
+            TJSONArray(Result).AddElement(GetValue(AObj.GetArrayElement(i)));
+        end;
+      else
+        Result := TJSONString.Create(AObj.ToString);
+      end;
+    end;
+  begin
+    context := TRttiContext.Create;
+    try
+      ctype := context.GetType(AObject.ClassType);
+      Result := TJSONObject.Create;
+      for field in ctype.GetFields do
+      begin
+        for attr in field.GetAttributes do
+        if attr is TJsonSerializableField then
+        begin
+          tag := TJsonSerializableField(attr).FieldName;
+          Result.AddPair(tag, GetValue(field.GetValue(AObject)));
+        end;
+      end;
+    finally
+      context.Free;
+    end;
+  end;
+var
+  outs: TStringStream;
+  root : TJSONObject;
+begin
+  try
+    root := CreateJSONObject(Self);
+    result := root.ToJSON;
+  finally
+    FreeAndNil(root);
+  end;
+end;
+
+{ TJsonSerializableField }
+
+constructor TJsonSerializableField.Create(const AFieldName: String);
+begin
+  FFieldName := AFieldName;
+end;
+
+initialization
+  JSONDateTimeFormatSetting.DateSeparator := '-';
+  JSONDateTimeFormatSetting.ShortDateFormat := 'yyyy-mm-dd';
+  JSONDateTimeFormatSetting.TimeSeparator := ':';
+  JSONDateTimeFormatSetting.LongTimeFormat := 'HH:nn';
+
+end.

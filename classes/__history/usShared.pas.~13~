@@ -1,0 +1,136 @@
+unit usShared;
+
+interface
+
+uses
+  System.SysUtils, System.Classes, FMX.Types, FMX.Controls, System.ImageList,
+  FMX.ImgList, FMX.Forms, System.Generics.Collections, usDevice, Androidapi.JNI.Net;
+
+type
+  TdmShared = class(TDataModule)
+    sbListBox: TStyleBook;
+    ImageList1: TImageList;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+  TfrmEditForm = class(TForm)
+  private
+    FLoading: Boolean;
+    procedure OnLoaded(AObject: TRespondObject);
+  protected
+    FDetail: TDeviceDetail;
+    procedure DoLoaded(AObject: TRespondObject); virtual;
+    procedure DoBeginLoading; virtual;
+    procedure DoEndLoading; virtual;
+  public
+    property IsLoading: Boolean read FLoading;
+    procedure Init(ADetail: TDeviceDetail); virtual;
+    procedure Load;
+  end;
+
+  TfrmEditFormClass = class of TfrmEditForm;
+
+  function IsConnected: Boolean;
+  function IsWiFiConnected: Boolean;
+  function IsMobileConnected: Boolean;
+
+var
+  dmShared: TdmShared;
+  editorFormRegister: TDictionary<TDeviceDetailClass, TfrmEditFormClass>;
+
+implementation
+
+
+uses
+  System.SysUtils,
+  Androidapi.JNIBridge,
+  Androidapi.JNI.GraphicsContentViewText,
+  Androidapi.JNI.JavaTypes,
+  Androidapi.JNI.Net,
+  FMX.Helpers.Android,
+  Androidapi.Helpers;
+
+{%CLASSGROUP 'FMX.Controls.TControl'}
+
+{$R *.dfm}
+
+function GetConnectivityManager: JConnectivityManager;
+var
+  ConnectivityServiceNative: JObject;
+begin
+  ConnectivityServiceNative := TAndroidHelper.Context.getSystemService
+    (TJContext.JavaClass.CONNECTIVITY_SERVICE);
+  if not Assigned(ConnectivityServiceNative) then
+    raise Exception.Create('Could not locate Connectivity Service');
+  Result := TJConnectivityManager.Wrap((ConnectivityServiceNative as ILocalObject).GetObjectID);
+  if not Assigned(Result) then
+    raise Exception.Create('Could not access Connectivity Manager');
+end;
+
+function IsConnected: Boolean;
+var
+  ConnectivityManager: JConnectivityManager;
+  ActiveNetwork: JNetworkInfo;
+begin
+  ConnectivityManager := GetConnectivityManager;
+  ActiveNetwork := ConnectivityManager.getActiveNetworkInfo;
+  Result := Assigned(ActiveNetwork) and ActiveNetwork.IsConnected;
+end;
+
+function IsWiFiConnected: Boolean;
+var
+  ConnectivityManager: JConnectivityManager;
+  WiFiNetwork: JNetworkInfo;
+begin
+  ConnectivityManager := GetConnectivityManager;
+  WiFiNetwork := ConnectivityManager.getNetworkInfo(TJConnectivityManager.JavaClass.TYPE_WIFI);
+  Result := WiFiNetwork.IsConnected;
+end;
+
+
+{ TfrmEditForm }
+
+procedure TfrmEditForm.DoBeginLoading;
+begin
+  ;
+end;
+
+procedure TfrmEditForm.DoEndLoading;
+begin
+  ;
+end;
+
+procedure TfrmEditForm.DoLoaded(AObject: TRespondObject);
+begin
+  ;
+end;
+
+procedure TfrmEditForm.Init(ADetail: TDeviceDetail);
+begin
+  FDetail := ADetail;
+  Load;
+end;
+
+procedure TfrmEditForm.Load;
+begin
+  FLoading := True;
+  FDetail.Load(OnLoaded);
+  DoBeginLoading;
+end;
+
+procedure TfrmEditForm.OnLoaded(AObject: TRespondObject);
+begin
+  DoLoaded(AObject);
+  DoEndLoading;
+  FLoading := False;
+end;
+
+initialization
+  editorFormRegister := TDictionary<TDeviceDetailClass, TfrmEditFormClass>.Create;
+
+finalization
+  FreeAndNil(editorFormRegister);
+end.

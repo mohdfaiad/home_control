@@ -1,0 +1,5 @@
+object dmShared: TdmShared
+  OldCreateOrder = False
+  Height = 259
+  Width = 322
+end

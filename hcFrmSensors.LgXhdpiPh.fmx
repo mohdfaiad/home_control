@@ -1,0 +1,25 @@
+inherited frmSensors_LgXhdpiPh: TfrmSensors_LgXhdpiPh
+  ClientHeight = 695
+  ClientWidth = 450
+  DesignerMasterStyle = 3
+  inherited lbSensors: TListBox
+    Size.Width = 450.000000000000000000
+    Size.Height = 647.000000000000000000
+    Viewport.Width = 450.000000000000000000
+    Viewport.Height = 647.000000000000000000
+  end
+  inherited ToolBar1: TToolBar
+    Size.Width = 450.000000000000000000
+    inherited sbRefresh: TSpeedButton
+      Position.X = 405.000000000000000000
+    end
+  end
+  inherited alSensors: TActionList
+    inherited acBack: TAction
+      ImageIndex = 0
+    end
+    inherited acRefresh: TAction
+      ImageIndex = 1
+    end
+  end
+end
